@@ -59,4 +59,4 @@ This project follows the MVVM (Model-View-ViewModel) architecture pattern:
 
 ## Screenshots
 
-[CountryList](images/Video.gif)
+![alt text](images/Video.gif)
