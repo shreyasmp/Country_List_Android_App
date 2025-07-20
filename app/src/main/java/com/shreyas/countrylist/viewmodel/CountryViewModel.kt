@@ -1,44 +1,52 @@
 package com.shreyas.countrylist.viewmodel
 
-import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.apollographql.apollo3.ApolloClient
 import com.apollographql.apollo3.exception.ApolloNetworkException
-import com.shreyas.countrylist.CountriesQuery
-import com.shreyas.countrylist.CountriesQuery.Country
+import com.shreyas.countrylist.data.CountryUiState
+import com.shreyas.countrylist.repository.CountryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
-class CountryViewModel @Inject constructor() : ViewModel() {
-    private val apolloClient = ApolloClient.Builder()
-        .serverUrl("http://10.0.2.2:8080/graphql") // for local server from emulator
-        .build()
+class CountryViewModel @Inject constructor(
+    private val repository: CountryRepository,
+) : ViewModel() {
 
-    var countries by mutableStateOf<List<Country>>(emptyList())
+    var uiState by mutableStateOf(CountryUiState())
         private set
 
     init {
+        fetchCountries()
+    }
+
+    fun fetchCountries() {
         viewModelScope.launch {
-            try {
-                val response = withContext(Dispatchers.IO) {
-                    apolloClient.query(CountriesQuery()).execute()
+            uiState = uiState.copy(
+                isLoading = true, error = null
+            )
+
+            repository.getCountries()
+                .onSuccess { countries ->
+                    uiState = uiState.copy(
+                        countries = countries,
+                        isLoading = false,
+                    )
                 }
-                countries = response.data?.countries?.map {
-                    Country(code = it?.code ?: "", name = it?.name ?: "")
-                } ?: emptyList()
-            } catch (e: ApolloNetworkException) {
-                Log.e("CountryViewModel", "Network error: ${e.message}", e)
-            } catch (e: Exception) {
-                Log.e("CountryViewModel", "Unexpected error: ${e.message}", e)
-            }
+                .onFailure { exception ->
+                    val errorMessage = when (exception) {
+                        is ApolloNetworkException -> "Network Error: Check your connection"
+                        else -> "Error loading countries: ${exception.message}"
+                    }
+                    uiState = uiState.copy(
+                        isLoading = false,
+                        error = errorMessage,
+                    )
+                }
         }
     }
 }

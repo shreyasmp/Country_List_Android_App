@@ -45,7 +45,8 @@ fun CountryList(
     paddingValues: PaddingValues,
     viewModel: CountryViewModel = hiltViewModel()
 ) {
-    val countries = viewModel.countries
+    // Access the uiState from the viewModel
+    val uiState = viewModel.uiState
 
     LazyColumn(
         modifier = Modifier.padding(
@@ -57,13 +58,25 @@ fun CountryList(
         horizontalAlignment = Alignment.Start,
         verticalArrangement = Arrangement.SpaceEvenly,
     ) {
-        items(countries) { country ->
-            Text(
-                text = "${country.name}  (${country.code})",
-                style = MaterialTheme.typography.bodyMedium
-
-            )
-            Spacer(modifier = Modifier.height(2.dp))
+        if (uiState.isLoading) {
+            item {
+                Text("Loading Countries List...")
+            }
+        } else if (uiState.error != null) {
+            item {
+                Text(
+                    text = uiState.error ?: "Unknown Error",
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        } else {
+            items(uiState.countries) { country ->
+                Text(
+                    text = "${country.name}  (${country.code})",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+            }
         }
     }
 }
